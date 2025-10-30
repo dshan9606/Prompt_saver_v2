@@ -121,25 +121,45 @@ async function populateCategoryControls() {
 // -------------------------
 // Tabs switching
 // -------------------------
+function activateTab(tabName) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const tab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+  if (tab) tab.classList.add('active');
+
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const panel = document.getElementById(`${tabName}-tab`);
+  if (panel) panel.classList.add('active');
+
+  if (tabName === 'view') {
+    populateCategoryControls();
+    loadPrompts(getSearchTerm(), getSelectedCategory());
+  } else if (tabName === 'manage') {
+    updateStats();
+  }
+}
+
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     const tabName = tab.dataset.tab;
 
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    const panel = document.getElementById(`${tabName}-tab`);
-    if (panel) panel.classList.add('active');
-
-    if (tabName === 'view') {
-      populateCategoryControls();
-      loadPrompts(getSearchTerm(), getSelectedCategory());
-    }
-    if (tabName === 'manage') {
-      updateStats();
-    }
+    chrome.storage.local.set({ lastActiveTab: tabName }, () => {
+      activateTab(tabName);
+    });
   });
+});
+
+// Restore last active tab on initialization
+chrome.storage.local.get(['lastActiveTab'], (result) => {
+  const last = result.lastActiveTab;
+  if (last) {
+    activateTab(last);
+  } else {
+    // If no stored tab, trigger behavior for the currently active tab (if any)
+    const activeTab = document.querySelector('.tab.active');
+    if (activeTab) {
+      activateTab(activeTab.dataset.tab);
+    }
+  }
 });
 
 // -------------------------
@@ -474,7 +494,6 @@ document.getElementById('clear-all-btn')?.addEventListener('click', async () => 
 // Initialize
 // -------------------------
 (async function init() {
-  // Ensure categories are present (seed a few helpful ones)
   const seeds = [DEFAULT_CATEGORY, 'SDLC', 'Control Testing', 'IAM', 'BCP/DR'];
   const current = await getCategories();
   await setCategories([...current, ...seeds]);
@@ -482,4 +501,38 @@ document.getElementById('clear-all-btn')?.addEventListener('click', async () => 
   await populateCategoryControls();
   await loadPrompts('', '');
   await updateStats();
+
+  const result = await chrome.storage.local.get(['lastActiveTab']);
+  const lastTab = result?.lastActiveTab || 'save';
+
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+  const activeTab = document.querySelector(`.tab[data-tab="${lastTab}"]`);
+  const activePanel = document.getElementById(`${lastTab}-tab`);
+
+  if (activeTab && activePanel) {
+    activeTab.classList.add('active');
+    activePanel.classList.add('active');
+
+    if (lastTab === 'view') {
+      await populateCategoryControls();
+      await loadPrompts(getSearchTerm(), getSelectedCategory());
+    }
+    if (lastTab === 'manage') {
+      await updateStats();
+    }
+  }
 })();
+
+// -------------------------
+// Detach popup to new window
+// -------------------------
+document.getElementById('detach-btn')?.addEventListener('click', () => {
+  chrome.windows.create({
+    url: chrome.runtime.getURL('popup.html'),
+    type: 'popup',
+    width: 450,
+    height: 650
+  });
+});
