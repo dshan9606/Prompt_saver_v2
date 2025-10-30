@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Prompt Saver</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --bg:#101317; --fg:#e8ecf1; --muted:#a7b0ba; --pri:#2e7dff; --ok:#45a049; --danger:#d9534f; --card:#151a21; --pill:#263043; }
+    body { margin:0; font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--fg); width:420px; }
+    header { display:flex; align-items:center; gap:.6rem; padding:12px 14px; border-bottom:1px solid #222a33; }
+    header h1 { font-size:16px; margin:0; }
+    .tabs { display:flex; gap:6px; padding:8px 10px; border-bottom:1px solid #222a33; }
+    .tab { border:0; background:#1b2230; color:var(--fg); padding:8px 10px; border-radius:6px; cursor:pointer; }
+    .tab.active { background:var(--pri); }
+    .content { padding:12px; }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+    .row { display:flex; gap:8px; }
+    .row > * { flex:1; }
+    label { display:block; margin:10px 0 6px; color:var(--muted); }
+    input[type="text"], select, textarea { width:100%; box-sizing:border-box; background:#0f141a; color:var(--fg); border:1px solid #2a3340; border-radius:6px; padding:8px; }
+    textarea { min-height:110px; resize:vertical; }
+    .btn { background:#2a3340; color:var(--fg); border:0; padding:8px 10px; border-radius:6px; cursor:pointer; }
+    .btn.primary { background:var(--pri); }
+    .btn.danger { background:var(--danger); }
+    .btn-group { display:flex; gap:8px; flex-wrap:wrap; }
+    .success { display:none; margin-top:8px; color:#9ef6b3; }
+    .success.show { display:block; }
+    .pill { background:var(--pill); color:#cfe0ff; border-radius:999px; padding:4px 8px; margin-left:6px; font-size:12px; }
+    .prompt-card { background:var(--card); border:1px solid #2a3340; border-radius:8px; padding:10px; margin:10px 0; }
+    .prompt-header { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .prompt-title { font-weight:600; }
+    .prompt-text { white-space:pre-wrap; background:#0f141a; border:1px solid #2a3340; padding:8px; border-radius:6px; margin:8px 0; }
+    .prompt-actions { display:flex; gap:6px; }
+    .empty { text-align:center; color:var(--muted); padding:24px 8px; }
+    .empty .emoji { font-size:28px; margin-bottom:6px; }
+    .top-filters { display:flex; gap:8px; }
+    small.hint { color:var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>💾 Prompt Saver</h1>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="save">Save Prompt</button>
+    <button class="tab" data-tab="view">My Prompts</button>
+    <button class="tab" data-tab="manage">Manage</button>
+  </div>
+
+  <div class="content">
+    <!-- SAVE TAB -->
+    <section id="save-tab" class="tab-content active">
+    <form id="save-form" autocomplete="off">
+    <label for="prompt-title">Title</label>
+    <input id="prompt-title" type="text" placeholder="e.g., Risk Control Testing Summary" required />
+
+    <div class="row">
+    <div>
+    <label for="prompt-category">Category</label>
+    <!-- options are populated by JS; includes “➕ Add new…” -->
+    <select id="prompt-category"></select>
+    <input id="new-category" type="text" placeholder="Type new category..." style="display:none;margin-top:8px;" />
+    <small class="hint">Examples: SDLC, Control Testing, IAM, BCP/DR</small>
+    </div>
+    <div>
+    <label for="prompt-tags">Tags (comma-separated)</label>
+    <input id="prompt-tags" type="text" placeholder="threat modeling, kri, remediation" />
+    </div>
+    </div>
+
+    <label for="prompt-text">Prompt</label>
+    <textarea id="prompt-text" placeholder="Paste or type your prompt here..." required></textarea>
+
+    <div class="btn-group" style="margin-top:10px;">
+    <button type="submit" class="btn primary">Save Prompt</button>
+    </div>
+
+    <div id="success-message" class="success">✓ Prompt saved successfully!</div>
+    </form>
+    </section>
+
+    <!-- VIEW TAB -->
+    <section id="view-tab" class="tab-content">
+    <div class="top-filters">
+    <input id="search-input" type="text" placeholder="Search title, text, or #tags..." />
+    <select id="filter-category" title="Filter by category">
+    <option value="">All categories</option>
+    <!-- categories populated by JS -->
+    </select>
+    </div>
+
+    <div id="prompt-list" style="margin-top:10px;">
+    <div class="empty">
+    <div class="emoji">📝</div>
+    <div>No prompts saved yet.<br/>Start by saving your first prompt!</div>
+    </div>
+    </div>
+    </section>
+
+    <!-- MANAGE TAB -->
+    <section id="manage-tab" class="tab-content">
+    <h3>Total Prompts Saved: <span id="prompt-count">0</span></h3>
+    <div class="btn-group">
+    <button id="export-btn" class="btn">📤 Export</button>
+    <button id="import-btn" class="btn">📥 Import</button>
+    <input id="import-file" type="file" accept="application/json" style="display:none;" />
+    <button id="clear-all-btn" class="btn danger">🗑️ Clear All Prompts</button>
+    </div>
+    </section>
+  </div>
+
+  <!-- Make sure we load the actual file name you provided -->
+  <script defer src="popup.js"></script>
+</body>
+</html>
