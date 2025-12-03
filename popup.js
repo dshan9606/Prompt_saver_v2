@@ -1,3 +1,4 @@
+
 // popup.hardened.js — Prompt Manager with Categories (Save + Filter)
 // ------------------------------------------------------------------
 // New in this version:
@@ -49,7 +50,6 @@ function isPromptLike(o) {
 async function getCategories() {
   const res = await chrome.storage.local.get(['categories']);
   const list = Array.isArray(res.categories) ? res.categories : [];
-  // Ensure DEFAULT_CATEGORY exists
   if (!list.includes(DEFAULT_CATEGORY)) list.unshift(DEFAULT_CATEGORY);
   return [...new Set(list)];
 }
@@ -76,8 +76,6 @@ async function ensureCategory(cat) {
 // -------------------------
 async function populateCategoryControls() {
   const list = await getCategories();
-
-  // Save tab select
   const saveSelect = document.getElementById('prompt-category');
   if (saveSelect) {
     saveSelect.innerHTML = '';
@@ -87,31 +85,25 @@ async function populateCategoryControls() {
       opt.textContent = c;
       saveSelect.appendChild(opt);
     }
-    // Add "Add new…" option
     const optNew = document.createElement('option');
     optNew.value = NEW_CATEGORY_SENTINEL;
     optNew.textContent = '➕ Add new…';
     saveSelect.appendChild(optNew);
   }
-
-  // View tab filter select
   const filterSelect = document.getElementById('filter-category');
   if (filterSelect) {
     const current = filterSelect.value || '';
     filterSelect.innerHTML = '';
-
     const allOpt = document.createElement('option');
     allOpt.value = '';
     allOpt.textContent = 'All categories';
     filterSelect.appendChild(allOpt);
-
     for (const c of list) {
       const opt = document.createElement('option');
       opt.value = c;
       opt.textContent = c;
       filterSelect.appendChild(opt);
     }
-    // restore previous selection if possible
     if ([...filterSelect.options].some(o => o.value === current)) {
       filterSelect.value = current;
     }
@@ -125,11 +117,9 @@ function activateTab(tabName) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   const tab = document.querySelector(`.tab[data-tab="${tabName}"]`);
   if (tab) tab.classList.add('active');
-
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   const panel = document.getElementById(`${tabName}-tab`);
   if (panel) panel.classList.add('active');
-
   if (tabName === 'view') {
     populateCategoryControls();
     loadPrompts(getSearchTerm(), getSelectedCategory());
@@ -137,24 +127,19 @@ function activateTab(tabName) {
     updateStats();
   }
 }
-
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     const tabName = tab.dataset.tab;
-
     chrome.storage.local.set({ lastActiveTab: tabName }, () => {
       activateTab(tabName);
     });
   });
 });
-
-// Restore last active tab on initialization
 chrome.storage.local.get(['lastActiveTab'], (result) => {
   const last = result.lastActiveTab;
   if (last) {
     activateTab(last);
   } else {
-    // If no stored tab, trigger behavior for the currently active tab (if any)
     const activeTab = document.querySelector('.tab.active');
     if (activeTab) {
       activateTab(activeTab.dataset.tab);
@@ -179,23 +164,18 @@ function getSelectedCategory() {
 // -------------------------
 document.getElementById('save-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-
   const titleEl = document.getElementById('prompt-title');
   const tagsEl = document.getElementById('prompt-tags');
   const textEl = document.getElementById('prompt-text');
   const catSel = document.getElementById('prompt-category');
   const newCatEl = document.getElementById('new-category');
-
   const title = (titleEl?.value ?? '').trim();
   const tagsInput = (tagsEl?.value ?? '').trim();
   const text = (textEl?.value ?? '').trim();
-
   if (!title || !text) {
     alert('Title and Text are required.');
     return;
   }
-
-  // Resolve category (existing or new)
   let category = (catSel?.value ?? '').trim();
   if (category === NEW_CATEGORY_SENTINEL) {
     const typed = (newCatEl?.value ?? '').trim();
@@ -206,7 +186,6 @@ document.getElementById('save-form')?.addEventListener('submit', async (e) => {
     category = typed;
   }
   category = await ensureCategory(category);
-
   const prompt = {
     id: (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
     title,
@@ -215,27 +194,18 @@ document.getElementById('save-form')?.addEventListener('submit', async (e) => {
     category,
     createdAt: new Date().toISOString()
   };
-
   try {
     const result = await chrome.storage.local.get(['prompts']);
     const prompts = result?.prompts || [];
     prompts.unshift(prompt);
     await chrome.storage.local.set({ prompts });
-
-    // Feedback
     const successMsg = document.getElementById('success-message');
     if (successMsg) {
       successMsg.classList.add('show');
       setTimeout(() => successMsg.classList.remove('show'), 3000);
     }
-
-    // Reset form
     document.getElementById('save-form').reset();
-
-    // Re-populate categories to include any newly added one
     await populateCategoryControls();
-    // Auto-switch to View? (optional)
-    // loadPrompts('', category);
   } catch (err) {
     console.error('Error saving prompt:', err);
     alert('An error occurred while saving. Please try again.');
@@ -258,16 +228,12 @@ async function loadPrompts(searchTerm = '', category = '') {
   try {
     const result = await chrome.storage.local.get(['prompts']);
     let prompts = result?.prompts || [];
-
-    // BACKFILL: ensure every prompt has a category; persist if we changed anything
     let mutated = false;
     prompts = prompts.map(p => {
       if (!p.category) { mutated = true; return { ...p, category: DEFAULT_CATEGORY }; }
       return p;
     });
     if (mutated) await chrome.storage.local.set({ prompts });
-
-    // Apply filters
     const search = (searchTerm || '').toLowerCase();
     const filtered = prompts.filter(p => {
       const matchesText =
@@ -277,10 +243,8 @@ async function loadPrompts(searchTerm = '', category = '') {
       const matchesCategory = !category || String(p.category || DEFAULT_CATEGORY) === category;
       return matchesText && matchesCategory;
     });
-
     const listEl = document.getElementById('prompt-list');
     if (!listEl) return;
-
     if (!filtered.length) {
       listEl.innerHTML = `
         <div class="empty">
@@ -289,31 +253,29 @@ async function loadPrompts(searchTerm = '', category = '') {
         </div>`;
       return;
     }
-
     listEl.innerHTML = filtered.map(prompt => `
       <div class="prompt-card">
         <div class="prompt-header">
           <div class="prompt-title">${escapeHtml(prompt.title || '')}</div>
           <div>
             <span class="pill">${escapeHtml(prompt.category || DEFAULT_CATEGORY)}</span>
-            ${prompt.tags?.length
-              ? `<span class="pill">${prompt.tags.map(t => `#${escapeHtml(t)}`).join(' ')}</span>`
-              : ''
-            }
+            ${prompt.tags?.length ? `<span class="pill">${prompt.tags.map(t => `#${escapeHtml(t)}`).join(' ')}</span>` : ''}
           </div>
         </div>
         <pre class="prompt-text">${escapeHtml(prompt.text || '')}</pre>
         <div class="prompt-actions">
           <button class="btn btn-copy" data-id="${escapeHtml(String(prompt.id))}" aria-label="Copy prompt">📋 Copy</button>
+          <button class="btn btn-paste" data-id="${escapeHtml(String(prompt.id))}" aria-label="Paste prompt">📥 Paste</button>
           <button class="btn btn-delete" data-id="${escapeHtml(String(prompt.id))}" aria-label="Delete prompt">🗑️ Delete</button>
         </div>
       </div>
     `).join('');
-
     listEl.querySelectorAll('.btn-copy').forEach(btn => {
       btn.addEventListener('click', () => copyPrompt(btn.getAttribute('data-id')));
     });
-
+    listEl.querySelectorAll('.btn-paste').forEach(btn => {
+      btn.addEventListener('click', () => pastePrompt(btn.getAttribute('data-id')));
+    });
     listEl.querySelectorAll('.btn-delete').forEach(btn => {
       btn.addEventListener('click', () => deletePrompt(btn.getAttribute('data-id')));
     });
@@ -342,12 +304,9 @@ async function copyPrompt(id) {
     const prompts = result?.prompts || [];
     const prompt = prompts.find(p => String(p.id) == String(id));
     if (!prompt) return;
-
     await navigator.clipboard.writeText(prompt.text || '');
-
     const btn = document.querySelector(`[data-id="${CSS.escape(String(id))}"].btn-copy`);
     if (!btn) return;
-
     const originalText = btn.textContent;
     const originalBg = btn.style.background;
     btn.textContent = '✓ Copied!';
@@ -359,6 +318,71 @@ async function copyPrompt(id) {
   } catch (err) {
     console.error('Clipboard error:', err);
     alert('Could not copy to clipboard. Please try again.');
+  }
+}
+
+// -------------------------
+// Paste prompt into active tab
+// -------------------------
+async function pastePrompt(id) {
+  try {
+    const result = await chrome.storage.local.get(['prompts']);
+    const prompts = result?.prompts || [];
+    const prompt = prompts.find(p => String(p.id) === String(id));
+    if (!prompt) return;
+
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      args: [prompt.text],
+      func: (text) => {
+        console.log('Injecting text into active tab...');
+        const inputBox =
+          document.querySelector('#m365-chat-editor-target-element') ||
+          document.querySelector('[contenteditable="true"]') ||
+          document.querySelector('textarea') ||
+          document.querySelector('input[type="text"], input');
+
+        if (!inputBox) {
+          console.log('Input box not found');
+          return;
+        }
+
+        inputBox.focus();
+
+        try {
+          const okInsert = document.execCommand('insertText', false, text);
+          if (okInsert) {
+            inputBox.dispatchEvent(new Event('input', { bubbles: true }));
+            inputBox.dispatchEvent(new Event('change', { bubbles: true }));
+            console.log('Prompt pasted using execCommand.');
+            return;
+          }
+        } catch (e) {
+          console.log('execCommand failed:', e);
+        }
+
+        if ('value' in inputBox) {
+          inputBox.value = text;
+          inputBox.dispatchEvent(new Event('input', { bubbles: true }));
+          inputBox.dispatchEvent(new Event('change', { bubbles: true }));
+          console.log('Prompt pasted via .value fallback.');
+          return;
+        }
+
+        try {
+          inputBox.textContent = text;
+          inputBox.dispatchEvent(new Event('input', { bubbles: true }));
+          console.log('Prompt pasted via textContent fallback.');
+        } catch (e) {
+          console.log('Fallback insertion failed:', e);
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Paste error:', err);
+    alert('Could not paste prompt. Please try again.');
   }
 }
 
@@ -420,11 +444,9 @@ document.getElementById('export-btn')?.addEventListener('click', async () => {
 document.getElementById('import-btn')?.addEventListener('click', () => {
   document.getElementById('import-file')?.click();
 });
-
 document.getElementById('import-file')?.addEventListener('change', async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
-
   const reader = new FileReader();
   reader.onload = async (event) => {
     try {
@@ -433,34 +455,23 @@ document.getElementById('import-file')?.addEventListener('change', async (e) => 
         alert('Invalid file format or content. Expected an array of prompt objects.');
         return;
       }
-
-      // Backfill missing category to DEFAULT_CATEGORY before merging
       const normalized = imported.map(p => ({ ...p, category: p.category?.trim() || DEFAULT_CATEGORY }));
-
       const result = await chrome.storage.local.get(['prompts', 'categories']);
       const existing = result?.prompts || [];
-
-      // Merge prompts unique by id; prefer existing (local) over imported on conflict
       const map = new Map();
       for (const p of existing) map.set(String(p.id), p);
       for (const p of normalized) if (!map.has(String(p.id))) map.set(String(p.id), p);
       const merged = Array.from(map.values());
-
-      // Size guard (approx) to avoid storage quota issues
       const approxBytes = new Blob([JSON.stringify(merged)]).size;
-      const MAX_SAFE_BYTES = 4.5 * 1024 * 1024; // ~4.5 MB headroom
+      const MAX_SAFE_BYTES = 4.5 * 1024 * 1024;
       if (approxBytes > MAX_SAFE_BYTES) {
         alert('Import too large for local storage. Consider splitting the file.');
         return;
       }
-
       await chrome.storage.local.set({ prompts: merged });
-
-      // Merge categories
       const importedCats = [...new Set(normalized.map(p => p.category))];
       const currentCats = await getCategories();
       await setCategories([...currentCats, ...importedCats]);
-
       updateStats();
       await populateCategoryControls();
       alert(`Successfully imported ${normalized.length} prompts!`);
@@ -469,9 +480,8 @@ document.getElementById('import-file')?.addEventListener('change', async (e) => 
       alert('Error importing file: ' + (err?.message || String(err)));
     }
   };
-
   reader.readAsText(file);
-  e.target.value = ''; // allow re-selecting same file later
+  e.target.value = '';
 });
 
 // -------------------------
@@ -490,49 +500,3 @@ document.getElementById('clear-all-btn')?.addEventListener('click', async () => 
   }
 });
 
-// -------------------------
-// Initialize
-// -------------------------
-(async function init() {
-  const seeds = [DEFAULT_CATEGORY, 'SDLC', 'Control Testing', 'IAM', 'BCP/DR'];
-  const current = await getCategories();
-  await setCategories([...current, ...seeds]);
-
-  await populateCategoryControls();
-  await loadPrompts('', '');
-  await updateStats();
-
-  const result = await chrome.storage.local.get(['lastActiveTab']);
-  const lastTab = result?.lastActiveTab || 'save';
-
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-  const activeTab = document.querySelector(`.tab[data-tab="${lastTab}"]`);
-  const activePanel = document.getElementById(`${lastTab}-tab`);
-
-  if (activeTab && activePanel) {
-    activeTab.classList.add('active');
-    activePanel.classList.add('active');
-
-    if (lastTab === 'view') {
-      await populateCategoryControls();
-      await loadPrompts(getSearchTerm(), getSelectedCategory());
-    }
-    if (lastTab === 'manage') {
-      await updateStats();
-    }
-  }
-})();
-
-// -------------------------
-// Detach popup to new window
-// -------------------------
-document.getElementById('detach-btn')?.addEventListener('click', () => {
-  chrome.windows.create({
-    url: chrome.runtime.getURL('popup.html'),
-    type: 'popup',
-    width: 450,
-    height: 650
-  });
-});
