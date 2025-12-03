@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Prompt Saver",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Save, organize, and manage your AI prompts",
   "action": {
     "default_popup": "popup.html",
@@ -11,7 +11,7 @@
       "128": "icon128.png"
     }
   },
-  "permissions": ["storage", "clipboardWrite"],
+  "permissions": ["storage", "clipboardWrite", "scripting", "activeTab"],
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",
