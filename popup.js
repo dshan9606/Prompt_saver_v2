@@ -20,6 +20,66 @@
 const DEFAULT_CATEGORY = 'Uncategorized';
 const NEW_CATEGORY_SENTINEL = '__NEW__';
 
+const DEFAULT_WORKFLOWS = [
+  {
+    id: 'itc-qa-3step',
+    name: 'IT Control Test QA (3-step)',
+    category: 'Control Testing',
+    variables: [
+      { key: 'control_name', label: 'Control Name' },
+      { key: 'control_id', label: 'Control ID' },
+      { key: 'test_period', label: 'Test Period' }
+    ],
+    steps: [
+      {
+        title: 'Step 1: Test Evidence Request',
+        template: `For control "{control_name}" (ID: {control_id}), please provide the following test evidence for the period {test_period}:
+
+1. Documentation of the control design and operating procedures
+2. Sample of control execution records
+3. Any exceptions or deviations noted during the period
+4. Remediation actions taken for any identified issues
+
+Please organize the evidence by date and include relevant screenshots or system exports.`
+      },
+      {
+        title: 'Step 2: Evidence Review & Analysis',
+        template: `Review the evidence provided for control "{control_name}" (ID: {control_id}) for period {test_period}:
+
+Analysis checklist:
+- Verify completeness of documentation
+- Check for proper authorization and approval
+- Validate timing of control execution
+- Assess effectiveness of control design
+- Identify any control gaps or weaknesses
+
+Document findings with specific references to evidence items.`
+      },
+      {
+        title: 'Step 3: Test Conclusion & Reporting',
+        template: `Based on the evidence review for control "{control_name}" (ID: {control_id}) during {test_period}:
+
+Test Conclusion:
+- Control Design: [Effective/Needs Improvement]
+- Operating Effectiveness: [Effective/Needs Improvement]
+- Sample Size: [X items tested]
+- Exceptions Found: [Number and description]
+
+Recommendations:
+[List any recommended improvements or remediation actions]
+
+Overall Assessment: [Pass/Pass with Exceptions/Fail]`
+      }
+    ]
+  }
+];
+
+let workflowState = {
+  currentWorkflowId: null,
+  currentStepIndex: 0,
+  variables: {}
+};
+
 // -------------------------
 // Utility: HTML escape (prevents XSS)
 // -------------------------
@@ -69,6 +129,154 @@ async function ensureCategory(cat) {
     await setCategories(list);
   }
   return name;
+}
+
+function getActiveWorkflow() {
+  if (!workflowState.currentWorkflowId) return undefined;
+  return DEFAULT_WORKFLOWS.find(w => w.id === workflowState.currentWorkflowId);
+}
+
+function substituteVars(template, vars) {
+  let result = template;
+  for (const [key, value] of Object.entries(vars)) {
+    const regex = new RegExp(`\\{${key}\\}`, 'g');
+    result = result.replace(regex, value || `{${key}}`);
+  }
+  return result;
+}
+
+function renderWorkflowSelect() {
+  const select = document.getElementById('workflow-select');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">-- Choose a workflow --</option>';
+  for (const wf of DEFAULT_WORKFLOWS) {
+    const opt = document.createElement('option');
+    opt.value = wf.id;
+    opt.textContent = wf.name;
+    select.appendChild(opt);
+  }
+}
+
+function renderWorkflowVariables() {
+  const container = document.getElementById('workflow-variables');
+  if (!container) return;
+
+  const workflow = getActiveWorkflow();
+  if (!workflow) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = workflow.variables.map(v => `
+    <label for="var-${escapeHtml(v.key)}">${escapeHtml(v.label)}</label>
+    <input type="text" id="var-${escapeHtml(v.key)}" class="workflow-var-input" data-key="${escapeHtml(v.key)}" value="${escapeHtml(workflowState.variables[v.key] || '')}" placeholder="Enter ${escapeHtml(v.label)}" />
+  `).join('');
+
+  container.querySelectorAll('.workflow-var-input').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const key = e.target.getAttribute('data-key');
+      workflowState.variables[key] = e.target.value;
+      renderWorkflowStep();
+    });
+  });
+}
+
+function collectWorkflowVars() {
+  const vars = {};
+  const workflow = getActiveWorkflow();
+  if (!workflow) return vars;
+
+  for (const v of workflow.variables) {
+    const input = document.getElementById(`var-${v.key}`);
+    if (input) {
+      vars[v.key] = input.value || '';
+    }
+  }
+  return vars;
+}
+
+function renderWorkflowStep() {
+  const workflow = getActiveWorkflow();
+  if (!workflow) return;
+
+  const step = workflow.steps[workflowState.currentStepIndex];
+  if (!step) return;
+
+  const vars = collectWorkflowVars();
+  const preview = substituteVars(step.template, vars);
+
+  const previewEl = document.getElementById('workflow-preview');
+  const titleEl = document.getElementById('workflow-step-title');
+  const currentStepEl = document.getElementById('current-step-num');
+  const totalStepsEl = document.getElementById('total-steps');
+  const prevBtn = document.getElementById('workflow-prev');
+  const nextBtn = document.getElementById('workflow-next');
+
+  if (previewEl) previewEl.textContent = preview;
+  if (titleEl) titleEl.textContent = step.title;
+  if (currentStepEl) currentStepEl.textContent = String(workflowState.currentStepIndex + 1);
+  if (totalStepsEl) totalStepsEl.textContent = String(workflow.steps.length);
+
+  if (prevBtn) prevBtn.disabled = workflowState.currentStepIndex === 0;
+  if (nextBtn) nextBtn.disabled = workflowState.currentStepIndex >= workflow.steps.length - 1;
+}
+
+async function insertIntoActiveElement(text) {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    if (!tab || !tab.url || !tab.url.includes('m365.cloud.microsoft')) {
+      alert('Please navigate to M365 Chat (https://m365.cloud.microsoft/chat) first.');
+      return;
+    }
+
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      args: [text],
+      func: (textToInsert) => {
+        const inputBox =
+          document.querySelector('#m365-chat-editor-target-element') ||
+          document.querySelector('[contenteditable="true"]') ||
+          document.querySelector('textarea');
+
+        if (!inputBox) {
+          alert('Click inside the Copilot chat input first, then try again.');
+          return;
+        }
+
+        inputBox.focus();
+
+        try {
+          const okInsert = document.execCommand('insertText', false, textToInsert);
+          if (okInsert) {
+            inputBox.dispatchEvent(new Event('input', { bubbles: true }));
+            inputBox.dispatchEvent(new Event('change', { bubbles: true }));
+            return;
+          }
+        } catch (e) {
+          console.log('execCommand failed:', e);
+        }
+
+        if ('value' in inputBox) {
+          inputBox.value = textToInsert;
+          inputBox.dispatchEvent(new Event('input', { bubbles: true }));
+          inputBox.dispatchEvent(new Event('change', { bubbles: true }));
+          return;
+        }
+
+        try {
+          inputBox.textContent = textToInsert;
+          inputBox.dispatchEvent(new Event('input', { bubbles: true }));
+        } catch (e) {
+          console.log('Fallback insertion failed:', e);
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Insert error:', err);
+    alert('Could not insert into chat. Make sure you are on the M365 Chat page.');
+  }
 }
 
 // -------------------------
@@ -125,6 +333,8 @@ function activateTab(tabName) {
     loadPrompts(getSearchTerm(), getSelectedCategory());
   } else if (tabName === 'manage') {
     updateStats();
+  } else if (tabName === 'workflows') {
+    renderWorkflowSelect();
   }
 }
 document.querySelectorAll('.tab').forEach(tab => {
@@ -499,4 +709,88 @@ document.getElementById('clear-all-btn')?.addEventListener('click', async () => 
     alert('Could not clear prompts. Please try again.');
   }
 });
+
+// -------------------------
+// Workflow Event Handlers
+// -------------------------
+document.getElementById('workflow-select')?.addEventListener('change', (e) => {
+  const workflowId = e.target.value;
+  const contentDiv = document.getElementById('workflow-content');
+
+  if (!workflowId) {
+    if (contentDiv) contentDiv.style.display = 'none';
+    workflowState.currentWorkflowId = null;
+    workflowState.currentStepIndex = 0;
+    workflowState.variables = {};
+    return;
+  }
+
+  workflowState.currentWorkflowId = workflowId;
+  workflowState.currentStepIndex = 0;
+  workflowState.variables = {};
+
+  if (contentDiv) contentDiv.style.display = 'block';
+  renderWorkflowVariables();
+  renderWorkflowStep();
+});
+
+document.getElementById('workflow-prev')?.addEventListener('click', () => {
+  if (workflowState.currentStepIndex > 0) {
+    workflowState.currentStepIndex--;
+    renderWorkflowStep();
+  }
+});
+
+document.getElementById('workflow-next')?.addEventListener('click', () => {
+  const workflow = getActiveWorkflow();
+  if (workflow && workflowState.currentStepIndex < workflow.steps.length - 1) {
+    workflowState.currentStepIndex++;
+    renderWorkflowStep();
+  }
+});
+
+document.getElementById('workflow-insert')?.addEventListener('click', async () => {
+  const workflow = getActiveWorkflow();
+  if (!workflow) return;
+
+  const step = workflow.steps[workflowState.currentStepIndex];
+  if (!step) return;
+
+  const vars = collectWorkflowVars();
+  const text = substituteVars(step.template, vars);
+
+  await insertIntoActiveElement(text);
+});
+
+document.getElementById('workflow-copy')?.addEventListener('click', async () => {
+  const workflow = getActiveWorkflow();
+  if (!workflow) return;
+
+  const step = workflow.steps[workflowState.currentStepIndex];
+  if (!step) return;
+
+  const vars = collectWorkflowVars();
+  const text = substituteVars(step.template, vars);
+
+  try {
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById('workflow-copy');
+    if (!btn) return;
+    const originalText = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    btn.style.background = '#45a049';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.style.background = '';
+    }, 1600);
+  } catch (err) {
+    console.error('Clipboard error:', err);
+    alert('Could not copy to clipboard. Please try again.');
+  }
+});
+
+// -------------------------
+// Initialize on load
+// -------------------------
+populateCategoryControls();
 

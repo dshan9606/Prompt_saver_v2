@@ -36,6 +36,11 @@
     .empty .emoji { font-size:28px; margin-bottom:6px; }
     .top-filters { display:flex; gap:8px; }
     small.hint { color:var(--muted); }
+    .workflow-preview { background:#0f141a; border:1px solid #2a3340; padding:10px; border-radius:6px; margin:10px 0; white-space:pre-wrap; min-height:80px; }
+    .workflow-nav { display:flex; justify-content:space-between; align-items:center; margin:10px 0; }
+    .workflow-step-info { color:var(--muted); font-size:13px; }
+    .workflow-variables { margin:10px 0; }
+    .workflow-variables input { margin-bottom:8px; }
   </style>
 </head>
 <body>
@@ -47,6 +52,7 @@
   <div class="tabs">
     <button class="tab active" data-tab="save">Save Prompt</button>
     <button class="tab" data-tab="view">My Prompts</button>
+    <button class="tab" data-tab="workflows">Workflows</button>
     <button class="tab" data-tab="manage">Manage</button>
   </div>
 
@@ -108,6 +114,34 @@
     <button id="import-btn" class="btn">📥 Import</button>
     <input id="import-file" type="file" accept="application/json" style="display:none;" />
     <button id="clear-all-btn" class="btn danger">🗑️ Clear All Prompts</button>
+    </div>
+    </section>
+
+    <!-- WORKFLOWS TAB -->
+    <section id="workflows-tab" class="tab-content">
+    <label for="workflow-select">Select Workflow</label>
+    <select id="workflow-select">
+      <option value="">-- Choose a workflow --</option>
+    </select>
+
+    <div id="workflow-content" style="display:none;">
+      <div class="workflow-variables" id="workflow-variables"></div>
+
+      <label>Preview (Step <span id="current-step-num">1</span> of <span id="total-steps">1</span>)</label>
+      <div class="workflow-preview" id="workflow-preview">Select a workflow to begin...</div>
+
+      <div class="workflow-nav">
+        <button id="workflow-prev" class="btn" disabled>← Prev</button>
+        <div class="workflow-step-info">
+          <strong id="workflow-step-title">Step Title</strong>
+        </div>
+        <button id="workflow-next" class="btn">Next →</button>
+      </div>
+
+      <div class="btn-group">
+        <button id="workflow-insert" class="btn primary">📤 Insert into Chat</button>
+        <button id="workflow-copy" class="btn">📋 Copy</button>
+      </div>
     </div>
     </section>
   </div>
