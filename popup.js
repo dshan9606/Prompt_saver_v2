@@ -71,6 +71,108 @@ Recommendations:
 Overall Assessment: [Pass/Pass with Exceptions/Fail]`
       }
     ]
+  },
+  {
+    id: 'slod-credible-challenge',
+    name: 'Issue & RP – SLOD Credible Challenge',
+    category: 'Risk & Compliance',
+    variables: [
+      { key: 'source', label: 'Issue source (Global Audit / Regulator / etc.)' },
+      { key: 'issue_rating', label: 'Issue rating' }
+    ],
+    steps: [
+      {
+        title: 'Step 1: Initial Review & Context Gathering',
+        template: `I have attached:
+- The Issue PDF from Archer GRC
+- The Remediation Plan (RP) PDF from Archer GRC
+- Supporting evidence files
+
+This is a {source} issue rated {issue_rating}.
+
+Please perform an initial review and provide:
+
+A) Issue summary
+   - Root cause (in 2–3 sentences)
+   - Original control gap or deficiency
+   - Potential consumer impact if left unaddressed
+
+B) Remediation Plan summary
+   - Key actions taken or planned
+   - Timeline and milestones
+   - Responsible parties (1LOD owner, 2LOD oversight)
+
+C) Evidence overview
+   - List the types of evidence provided (e.g., policy documents, system screenshots, test results, training records)
+   - Note any obvious gaps in evidence at first glance
+
+D) Initial questions for deeper analysis
+   - What additional context or evidence would help assess whether the RP fully addresses the root cause?
+   - Are there any red flags or areas of concern in the RP or evidence?`
+      },
+      {
+        title: 'Step 2: Deep Dive Analysis & Testing',
+        template: `Based on the Issue and RP for this {source} issue rated {issue_rating}, please perform a detailed analysis:
+
+A) Root cause validation
+   - Does the RP correctly identify and address the true root cause?
+   - Are there any underlying systemic issues not addressed?
+
+B) Control design assessment
+   - Evaluate the design of new/updated controls
+   - Are they appropriate for the risk level ({issue_rating})?
+   - Do they align with regulatory expectations and industry best practices?
+
+C) Evidence sufficiency and quality
+   - Is the evidence complete, relevant, and reliable?
+   - Does it demonstrate effective implementation and operation of the remediation?
+   - Are there any gaps or inconsistencies?
+
+D) Testing and validation
+   - What testing has been performed (e.g., walkthroughs, sample testing, UAT)?
+   - Are the test results sufficient to conclude the control is operating effectively?
+   - Recommend any additional testing needed
+
+E) Sustainability and monitoring
+   - Are there ongoing monitoring mechanisms in place?
+   - Is there a plan for periodic review and continuous improvement?
+   - What is the risk of regression?
+
+F) Consumer impact and outcomes
+   - How does the remediation improve consumer outcomes?
+   - Are there measurable improvements or KPIs?`
+      },
+      {
+        title: 'Step 3: SLOD Conclusion & Recommendation',
+        template: `Based on the comprehensive review of this {source} issue rated {issue_rating}, provide:
+
+A) Overall assessment
+   - Summarize the effectiveness of the Remediation Plan
+   - Rate the quality of evidence provided (Strong / Adequate / Weak)
+   - Assess the likelihood of sustainable remediation
+
+B) Residual risk evaluation
+   - What residual risks remain after remediation?
+   - Is the residual risk within the organization's risk appetite?
+   - Are there any dependencies or assumptions that could affect the outcome?
+
+C) SLOD recommendation
+   - Choose and justify one of:
+     • Support closure now
+     • Do not support closure – further remediation and/or evidence required
+     • Support partial closure with documented residual Risk Acceptance
+   - Provide a 4–8 bullet "SLOD-ready" justification, explicitly referencing:
+     • Residual risk level vs risk appetite
+     • Strength of the new/updated control environment
+     • Consumer outcome
+     • Confidence in sustainability of the fix
+
+D) Required follow-ups and escalations
+   - List any:
+     • Specific additional evidence/tests you would require
+     • Items you would escalate to ERM, Risk Pillar Committee, or appropriate governance forums`
+      }
+    ]
   }
 ];
 
