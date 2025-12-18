@@ -892,6 +892,18 @@ document.getElementById('workflow-copy')?.addEventListener('click', async () => 
 });
 
 // -------------------------
+// Detach to new window
+// -------------------------
+document.getElementById('detach-btn')?.addEventListener('click', () => {
+  chrome.windows.create({
+    url: chrome.runtime.getURL('popup.html'),
+    type: 'popup',
+    width: 450,
+    height: 650
+  });
+});
+
+// -------------------------
 // Initialize on load
 // -------------------------
 populateCategoryControls();
