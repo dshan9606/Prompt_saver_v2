@@ -173,6 +173,199 @@ D) Required follow-ups and escalations
      • Items you would escalate to ERM, Risk Pillar Committee, or appropriate governance forums`
       }
     ]
+  },
+  {
+    id: 'slod-not-able-to-test',
+    name: 'SLOD Review – Not Able to Test',
+    category: 'Control Testing',
+    variables: [
+      { key: 'control_name', label: 'Control Name' },
+      { key: 'control_description', label: 'Control description / objective' },
+      { key: 'reason_not_testable', label: 'FLOD reason for Not Able to Test' },
+      { key: 'period', label: 'Intended test period / population' },
+      { key: 'testing_guidance', label: 'Key Procedure excerpts (optional)' }
+    ],
+    steps: [
+      {
+        title: 'Step 1 — Initial Review & Procedure Alignment',
+        template: `You are a SLOD / IT Risk Advisor reviewing a control test that has been marked **Not Able to Test** by the First Line of Defense (FLOD).
+
+Your role is to perform a credible challenge to determine whether this outcome is acceptable under the **Control Testing Procedure 2024** and the organization's risk appetite.
+
+Control context:
+- Control: {control_name}
+- Control description / objective:
+  {control_description}
+- FLOD reason for Not Able to Test:
+<<<
+{reason_not_testable}
+>>>
+
+- Intended test period / population:
+  {period}
+
+- Key Procedure excerpts (if provided):
+<<<
+{testing_guidance}
+>>>
+
+Tasks:
+
+1) Summarize the control and its role
+   - What is this control meant to do?
+   - What risk(s) does it mitigate?
+   - What is the inherent risk level if this control fails or is absent?
+
+2) Assess the stated reason for Not Able to Test
+   - Does the reason align with one of the acceptable categories in the Control Testing Procedure 2024?
+     (e.g., control not yet implemented, control design changed mid-period, insufficient population, system unavailability, etc.)
+   - Is the explanation clear, specific, and well-documented?
+   - Are there any red flags or vague statements that need clarification?
+
+3) Identify what evidence or documentation you would expect to see
+   - What should FLOD have provided to support this Not Able to Test conclusion?
+   - Is there evidence of attempts to test, or documentation of the barrier?
+   - Are there any workarounds, compensating controls, or interim measures in place?
+
+4) List initial questions or concerns
+   - What additional information do you need from FLOD?
+   - Are there any process or design issues that contributed to this outcome?
+   - Is this a one-time occurrence, or part of a pattern?
+
+Output:
+- A structured summary addressing each of the four tasks above
+- Highlight any gaps or areas requiring follow-up before proceeding to Step 2`.trim()
+      },
+      {
+        title: 'Step 2 — Deep Dive – Validity & Risk Assessment',
+        template: `You are continuing your SLOD review of a control test marked **Not Able to Test**.
+
+Assume you have completed Step 1 and gathered initial context.
+
+Control context:
+- Control: {control_name}
+- Control description / objective:
+  {control_description}
+- FLOD reason for Not Able to Test:
+<<<
+{reason_not_testable}
+>>>
+
+- Intended test period / population:
+  {period}
+
+- Key Procedure excerpts used for your review:
+<<<
+{testing_guidance}
+>>>
+
+Tasks:
+
+1) Validate the legitimacy of the Not Able to Test outcome
+   - Is the stated reason truly a barrier to testing, or could alternative testing methods have been used?
+   - Does the Control Testing Procedure 2024 explicitly allow for this scenario?
+   - Are there precedents or similar controls that were tested despite similar challenges?
+
+2) Assess the risk implications
+   - What is the residual risk to the organization given that this control was not tested?
+   - Is there a compensating control or alternate assurance mechanism in place?
+   - Does the risk level warrant escalation or additional scrutiny?
+
+3) Evaluate FLOD's response and documentation quality
+   - Did FLOD provide sufficient detail and supporting evidence?
+   - Is there a clear plan to address the root cause (e.g., control redesign, system fix, process improvement)?
+   - Are there timelines and accountabilities for resolving the issue?
+
+4) Determine whether an Issue should be raised
+   - Does this Not Able to Test outcome represent a control deficiency that requires formal tracking?
+   - Should this be documented as an Issue in Archer GRC?
+   - What would be the appropriate severity/rating if an Issue is warranted?
+
+5) Consider alternative outcomes
+   - Could this be reclassified as:
+     - Ineffective (if the control is fundamentally broken),
+     - Delayed test (if it's a timing issue),
+     - Control inactivation (if the control is no longer relevant or operational)?
+   - What would need to be true for each alternative?
+
+Output:
+- A detailed analysis addressing each of the five tasks above
+- A preliminary view on whether you would support the Not Able to Test conclusion
+- Specific conditions or actions required (e.g., "Support, but only with additional documentation / issue", "Do not support – should be treated as ineffective / redesign in progress")`.trim()
+      },
+      {
+        title: 'Step 3 — SLOD Recommendation & Audit-Ready Summary',
+        template: `You are finalizing your SLOD / IT Risk view on a control test marked **Not Able to Test**, and need to produce an **audit-ready summary and recommendation**.
+
+Assume you have completed your review in Steps 1 and 2.
+
+Reviewer context:
+- Control: {control_name}
+- Control description / objective:
+  {control_description}
+- FLOD reason for Not Able to Test:
+<<<
+{reason_not_testable}
+>>>
+
+- Intended test period / population:
+  {period}
+
+- Key Procedure excerpts used for your review:
+<<<
+{testing_guidance}
+>>>
+
+Tasks:
+
+1) Summarize the situation in plain language
+   - Briefly restate:
+     - What the control is meant to do.
+     - Why the test was marked Not Able to Test.
+     - The inherent risk level and significance of this control.
+
+2) Provide a clear SLOD recommendation
+   - Choose one of the following and justify:
+     - Support Not Able to Test as documented (with or without minor documentation enhancements).
+     - Support Not Able to Test **only with conditions**, such as:
+       - Creation/update of an Issue,
+       - Formal Risk Acceptance,
+       - Specific documentation changes,
+       - Commitment to a near-term retest or redesign.
+     - Do **not** support Not Able to Test – reclassify as:
+       - Ineffective control (with Issue),
+       - Control inactivation plus alternate mitigation,
+       - Or a standard delayed test (with updated scheduling and due dates).
+
+3) Highlight what would need to be true in the future to avoid repeat Not Able to Test
+   - Identify:
+     - Process, design, or documentation changes needed so that the control can be tested going forward.
+     - Any expectations you have for monitoring repeated Not Able to Test outcomes on this control or similar controls.
+
+Output:
+
+A) SLOD narrative summary (audit-ready)
+   - 4–8 bullets summarizing:
+     - The control's role.
+     - Why it was Not Able to Test this period.
+     - Your assessment of whether that is acceptable within the Procedure and risk appetite context.
+
+B) Formal SLOD recommendation
+   - 3–6 bullets clearly stating:
+     - Your decision (support / support with conditions / do not support).
+     - Any required actions (issues, risk acceptance, retest timing, control redesign, documentation changes).
+
+C) Forward-looking expectations
+   - 3–5 bullets on:
+     - How FLOD and SLOD should prevent repeated Not Able to Test outcomes for this control.
+     - Any themes or lessons that should be communicated to ERM or other governance forums.
+
+D) Required follow-ups and escalations
+   - List any:
+     • Specific additional evidence/tests you would require
+     • Items you would escalate to ERM, Risk Pillar Committee, or appropriate governance forums`.trim()
+      }
+    ]
   }
 ];
 

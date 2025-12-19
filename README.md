@@ -1,7 +1,7 @@
 
 # Prompt Manager & Workflow Assistant (Chrome Extension)
 
-**Last updated:** 2025-01-15
+**Last updated:** 2025-01-16
 
 This repository contains a Chrome/Chromium extension that combines a **Prompt Manager** with **Workflow Automation** capabilities.
 It lets you **save**, **search**, **copy**, **delete**, **export**, and **import** text prompts, plus run **guided multi-step workflows** with variable substitution and direct integration with **Microsoft 365 Copilot Chat**.
@@ -41,7 +41,10 @@ It lets you **save**, **search**, **copy**, **delete**, **export**, and **import
 - **Step navigation** (Prev/Next) through workflow stages
 - **Direct insertion** into Microsoft 365 Copilot Chat
 - **Copy to clipboard** fallback option
-- **Pre-built workflow**: IT Control Test QA (3-step process)
+- **Pre-built workflows**:
+  - IT Control Test QA (3-step process)
+  - Issue & RP – SLOD Credible Challenge (3-step process)
+  - SLOD Review – Not Able to Test (3-step process)
 
 ---
 
@@ -91,8 +94,10 @@ It lets you **save**, **search**, **copy**, **delete**, **export**, and **import
 
 ## Workflows
 
-### IT Control Test QA (3-step)
-A guided workflow for IT control testing with three stages:
+### 1. IT Control Test QA (3-step)
+**Category:** Control Testing
+
+A guided workflow for IT control testing with three stages.
 
 **Variables:**
 - Control Name
@@ -104,10 +109,41 @@ A guided workflow for IT control testing with three stages:
 2. **Evidence Review & Analysis** - Analyze completeness and effectiveness
 3. **Test Conclusion & Reporting** - Document findings and recommendations
 
-**How to Use:**
+### 2. Issue & RP – SLOD Credible Challenge (3-step)
+**Category:** Risk & Compliance
+
+A structured workflow for Second Line of Defense (SLOD) credible challenge reviews of issues and remediation plans.
+
+**Variables:**
+- Source (e.g., Internal Audit, Regulatory Exam, SLOD Review)
+- Issue Rating (e.g., High, Moderate, Low)
+
+**Steps:**
+1. **Initial Review & Context Gathering** - Understand issue background and remediation plan
+2. **Deep Dive Analysis & Testing** - Evaluate root cause, controls, and remediation effectiveness
+3. **SLOD Conclusion & Recommendation** - Provide independent assessment and recommendations
+
+### 3. SLOD Review – Not Able to Test (3-step)
+**Category:** Control Testing
+
+A comprehensive workflow for documenting SLOD reviews when controls cannot be tested due to various constraints.
+
+**Variables:**
+- Control Name
+- Control Description
+- Reason Not Testable (e.g., system unavailable, insufficient evidence, timing constraints)
+- Period (e.g., Q1 2025)
+- Testing Guidance (e.g., alternative procedures, future testing approach)
+
+**Steps:**
+1. **Initial Review & Procedure Alignment** - Verify control design and testing constraints
+2. **Deep Dive – Validity & Risk Assessment** - Assess impact and alternative evidence
+3. **SLOD Recommendation & Audit-Ready Summary** - Document conclusion and next steps
+
+### How to Use Workflows
 1. Navigate to the **Workflows** tab
-2. Select "IT Control Test QA (3-step)" from the dropdown
-3. Fill in the variable fields (Control Name, Control ID, Test Period)
+2. Select a workflow from the dropdown
+3. Fill in the variable fields (all workflows have 2-5 variables)
 4. Navigate through steps using **Prev/Next** buttons
 5. Click **Insert into Chat** to send to M365 Copilot, or **Copy** to clipboard
 
@@ -279,12 +315,17 @@ Workflows are defined in `popup.js` in the `DEFAULT_WORKFLOWS` array. To add a n
 - [ ] Clear All empties list and count
 - [ ] XSS safety: strings like `<script>alert(1)</script>` display as text, not HTML
 
-### Workflows – ITC QA
-- [ ] Workflow tab loads with "IT Control Test QA (3-step)"
-- [ ] Variables render with correct labels
+### Workflows – All Three Workflows
+- [ ] Workflow tab loads with all three workflows in dropdown
+- [ ] "IT Control Test QA (3-step)" workflow selectable
+- [ ] "Issue & RP – SLOD Credible Challenge" workflow selectable
+- [ ] "SLOD Review – Not Able to Test" workflow selectable
+- [ ] Variables render with correct labels for each workflow
 - [ ] Typing in variables updates the preview for the current step
-- [ ] Prev/Next cycle correctly through 3 steps, with correct "Step X of 3"
+- [ ] Prev/Next cycle correctly through 3 steps for each workflow
 - [ ] Prev button disabled on step 1, Next button disabled on step 3
+- [ ] Step indicator shows "Step X of 3" correctly
+- [ ] Variable substitution works correctly with {placeholder} format
 
 ### Insert into M365 Chat
 - [ ] Navigate to `https://m365.cloud.microsoft/chat`
