@@ -41,6 +41,14 @@
     .workflow-step-info { color:var(--muted); font-size:13px; }
     .workflow-variables { margin:10px 0; }
     .workflow-variables input { margin-bottom:8px; }
+    .workflow-card { background:var(--card); border:1px solid #2a3340; border-radius:8px; padding:10px; margin:10px 0; }
+    .workflow-card-header { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .workflow-card-title { font-weight:600; }
+    .workflow-card-actions { display:flex; gap:6px; }
+    .step-editor { background:#0f141a; border:1px solid #2a3340; border-radius:6px; padding:10px; margin:10px 0; }
+    .step-editor-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .step-editor input[type="text"] { margin-bottom:8px; }
+    .step-editor textarea { min-height:120px; }
   </style>
 </head>
 <body>
@@ -108,18 +116,35 @@
 
     <!-- MANAGE TAB -->
     <section id="manage-tab" class="tab-content">
-    <h3>Total Prompts Saved: <span id="prompt-count">0</span></h3>
+    <h3>Prompts</h3>
+    <div style="margin-bottom:16px;">
+      <strong>Total Saved: <span id="prompt-count">0</span></strong>
+    </div>
     <div class="btn-group">
-    <button id="export-btn" class="btn">📤 Export</button>
-    <button id="import-btn" class="btn">📥 Import</button>
+    <button id="export-btn" class="btn">📤 Export Prompts</button>
+    <button id="import-btn" class="btn">📥 Import Prompts</button>
     <input id="import-file" type="file" accept="application/json" style="display:none;" />
     <button id="clear-all-btn" class="btn danger">🗑️ Clear All Prompts</button>
+    </div>
+
+    <h3 style="margin-top:24px;">Workflows</h3>
+    <div style="margin-bottom:16px;">
+      <strong>Total Saved: <span id="workflow-count">0</span></strong>
+    </div>
+    <div class="btn-group">
+    <button id="export-workflows-btn" class="btn">📤 Export Workflows</button>
+    <button id="import-workflows-btn" class="btn">📥 Import Workflows</button>
+    <input id="import-workflows-file" type="file" accept="application/json" style="display:none;" />
+    <button id="reset-workflows-btn" class="btn">🔄 Reset to Defaults</button>
     </div>
     </section>
 
     <!-- WORKFLOWS TAB -->
     <section id="workflows-tab" class="tab-content">
-    <label for="workflow-select">Select Workflow</label>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <label for="workflow-select" style="margin:0;">Select Workflow</label>
+      <button id="manage-workflows-btn" class="btn" style="padding:6px 10px;font-size:12px;">⚙️ Manage</button>
+    </div>
     <select id="workflow-select">
       <option value="">-- Choose a workflow --</option>
     </select>
@@ -141,6 +166,44 @@
       <div class="btn-group">
         <button id="workflow-insert" class="btn primary">📤 Insert into Chat</button>
         <button id="workflow-copy" class="btn">📋 Copy</button>
+      </div>
+    </div>
+
+    <!-- WORKFLOW MANAGEMENT MODAL -->
+    <div id="workflow-manager" style="display:none;margin-top:20px;border-top:1px solid #2a3340;padding-top:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h3 style="margin:0;">Manage Workflows</h3>
+        <button id="close-workflow-manager" class="btn" style="padding:6px 10px;font-size:12px;">✕ Close</button>
+      </div>
+
+      <div class="btn-group" style="margin-bottom:16px;">
+        <button id="create-workflow-btn" class="btn primary">➕ Create New Workflow</button>
+      </div>
+
+      <div id="workflow-list"></div>
+
+      <!-- CREATE/EDIT WORKFLOW FORM -->
+      <div id="workflow-form" style="display:none;margin-top:20px;border:1px solid #2a3340;border-radius:8px;padding:12px;background:var(--card);">
+        <h4 id="workflow-form-title">Create New Workflow</h4>
+
+        <label for="wf-name">Workflow Name</label>
+        <input id="wf-name" type="text" placeholder="e.g., IT Control Test QA" required />
+
+        <label for="wf-category">Category</label>
+        <input id="wf-category" type="text" placeholder="e.g., Control Testing" />
+
+        <label for="wf-variables">Variables (one per line: key|label)</label>
+        <textarea id="wf-variables" placeholder="control_name|Control Name&#10;control_id|Control ID&#10;test_period|Test Period" style="min-height:80px;"></textarea>
+        <small class="hint">Format: variable_key|Display Label (one per line)</small>
+
+        <label>Workflow Steps</label>
+        <div id="workflow-steps-container"></div>
+        <button id="add-step-btn" class="btn" style="margin-top:8px;">➕ Add Step</button>
+
+        <div class="btn-group" style="margin-top:16px;">
+          <button id="save-workflow-btn" class="btn primary">💾 Save Workflow</button>
+          <button id="cancel-workflow-btn" class="btn">Cancel</button>
+        </div>
       </div>
     </div>
     </section>

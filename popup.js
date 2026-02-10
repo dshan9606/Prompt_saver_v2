@@ -426,9 +426,55 @@ async function ensureCategory(cat) {
   return name;
 }
 
-function getActiveWorkflow() {
+async function getWorkflows() {
+  const res = await chrome.storage.local.get(['workflows']);
+  return Array.isArray(res.workflows) ? res.workflows : [];
+}
+
+async function setWorkflows(workflows) {
+  await chrome.storage.local.set({ workflows });
+  return workflows;
+}
+
+async function initializeWorkflows() {
+  const existing = await getWorkflows();
+  if (existing.length === 0) {
+    await setWorkflows(DEFAULT_WORKFLOWS);
+    return DEFAULT_WORKFLOWS;
+  }
+  return existing;
+}
+
+async function saveWorkflow(workflow) {
+  const workflows = await getWorkflows();
+  const existingIndex = workflows.findIndex(w => w.id === workflow.id);
+
+  if (existingIndex >= 0) {
+    workflows[existingIndex] = workflow;
+  } else {
+    workflows.push(workflow);
+  }
+
+  await setWorkflows(workflows);
+  return workflow;
+}
+
+async function deleteWorkflow(workflowId) {
+  const workflows = await getWorkflows();
+  const filtered = workflows.filter(w => w.id !== workflowId);
+  await setWorkflows(filtered);
+  return filtered;
+}
+
+async function resetWorkflowsToDefaults() {
+  await setWorkflows(DEFAULT_WORKFLOWS);
+  return DEFAULT_WORKFLOWS;
+}
+
+async function getActiveWorkflow() {
   if (!workflowState.currentWorkflowId) return undefined;
-  return DEFAULT_WORKFLOWS.find(w => w.id === workflowState.currentWorkflowId);
+  const workflows = await getWorkflows();
+  return workflows.find(w => w.id === workflowState.currentWorkflowId);
 }
 
 function substituteVars(template, vars) {
@@ -440,12 +486,13 @@ function substituteVars(template, vars) {
   return result;
 }
 
-function renderWorkflowSelect() {
+async function renderWorkflowSelect() {
   const select = document.getElementById('workflow-select');
   if (!select) return;
 
+  const workflows = await getWorkflows();
   select.innerHTML = '<option value="">-- Choose a workflow --</option>';
-  for (const wf of DEFAULT_WORKFLOWS) {
+  for (const wf of workflows) {
     const opt = document.createElement('option');
     opt.value = wf.id;
     opt.textContent = wf.name;
@@ -453,11 +500,11 @@ function renderWorkflowSelect() {
   }
 }
 
-function renderWorkflowVariables() {
+async function renderWorkflowVariables() {
   const container = document.getElementById('workflow-variables');
   if (!container) return;
 
-  const workflow = getActiveWorkflow();
+  const workflow = await getActiveWorkflow();
   if (!workflow) {
     container.innerHTML = '';
     return;
@@ -477,9 +524,9 @@ function renderWorkflowVariables() {
   });
 }
 
-function collectWorkflowVars() {
+async function collectWorkflowVars() {
   const vars = {};
-  const workflow = getActiveWorkflow();
+  const workflow = await getActiveWorkflow();
   if (!workflow) return vars;
 
   for (const v of workflow.variables) {
@@ -491,14 +538,14 @@ function collectWorkflowVars() {
   return vars;
 }
 
-function renderWorkflowStep() {
-  const workflow = getActiveWorkflow();
+async function renderWorkflowStep() {
+  const workflow = await getActiveWorkflow();
   if (!workflow) return;
 
   const step = workflow.steps[workflowState.currentStepIndex];
   if (!step) return;
 
-  const vars = collectWorkflowVars();
+  const vars = await collectWorkflowVars();
   const preview = substituteVars(step.template, vars);
 
   const previewEl = document.getElementById('workflow-preview');
@@ -1006,9 +1053,278 @@ document.getElementById('clear-all-btn')?.addEventListener('click', async () => 
 });
 
 // -------------------------
+// Workflow Management
+// -------------------------
+let editingWorkflowId = null;
+let workflowSteps = [];
+
+async function renderWorkflowList() {
+  const container = document.getElementById('workflow-list');
+  if (!container) return;
+
+  const workflows = await getWorkflows();
+
+  if (workflows.length === 0) {
+    container.innerHTML = '<div class="empty"><div class="emoji">📋</div><div>No workflows yet. Create your first workflow!</div></div>';
+    return;
+  }
+
+  container.innerHTML = workflows.map(wf => `
+    <div class="workflow-card">
+      <div class="workflow-card-header">
+        <div>
+          <div class="workflow-card-title">${escapeHtml(wf.name)}</div>
+          <small style="color:var(--muted);">${escapeHtml(wf.category || 'Uncategorized')} • ${wf.steps.length} step${wf.steps.length !== 1 ? 's' : ''} • ${wf.variables.length} variable${wf.variables.length !== 1 ? 's' : ''}</small>
+        </div>
+        <div class="workflow-card-actions">
+          <button class="btn" data-edit-workflow="${escapeHtml(wf.id)}" title="Edit">✏️</button>
+          <button class="btn danger" data-delete-workflow="${escapeHtml(wf.id)}" title="Delete">🗑️</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('[data-edit-workflow]').forEach(btn => {
+    btn.addEventListener('click', () => editWorkflow(btn.getAttribute('data-edit-workflow')));
+  });
+
+  container.querySelectorAll('[data-delete-workflow]').forEach(btn => {
+    btn.addEventListener('click', () => deleteWorkflowById(btn.getAttribute('data-delete-workflow')));
+  });
+}
+
+async function editWorkflow(workflowId) {
+  const workflows = await getWorkflows();
+  const workflow = workflows.find(w => w.id === workflowId);
+  if (!workflow) return;
+
+  editingWorkflowId = workflowId;
+  workflowSteps = [...workflow.steps];
+
+  document.getElementById('workflow-form-title').textContent = 'Edit Workflow';
+  document.getElementById('wf-name').value = workflow.name;
+  document.getElementById('wf-category').value = workflow.category || '';
+  document.getElementById('wf-variables').value = workflow.variables.map(v => `${v.key}|${v.label}`).join('\n');
+
+  renderWorkflowStepsEditor();
+  document.getElementById('workflow-form').style.display = 'block';
+}
+
+async function deleteWorkflowById(workflowId) {
+  const workflows = await getWorkflows();
+  const workflow = workflows.find(w => w.id === workflowId);
+  if (!workflow) return;
+
+  if (!confirm(`Are you sure you want to delete "${workflow.name}"? This cannot be undone!`)) return;
+
+  await deleteWorkflow(workflowId);
+  await renderWorkflowList();
+  await renderWorkflowSelect();
+  await updateWorkflowStats();
+}
+
+function renderWorkflowStepsEditor() {
+  const container = document.getElementById('workflow-steps-container');
+  if (!container) return;
+
+  container.innerHTML = workflowSteps.map((step, index) => `
+    <div class="step-editor">
+      <div class="step-editor-header">
+        <strong>Step ${index + 1}</strong>
+        <button class="btn danger" data-remove-step="${index}" style="padding:4px 8px;font-size:12px;">Remove</button>
+      </div>
+      <input type="text" placeholder="Step title (e.g., Step 1: Initial Review)" value="${escapeHtml(step.title)}" data-step-title="${index}" />
+      <textarea placeholder="Step template with {variable} placeholders..." data-step-template="${index}">${escapeHtml(step.template)}</textarea>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('[data-step-title]').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const index = parseInt(e.target.getAttribute('data-step-title'));
+      workflowSteps[index].title = e.target.value;
+    });
+  });
+
+  container.querySelectorAll('[data-step-template]').forEach(textarea => {
+    textarea.addEventListener('input', (e) => {
+      const index = parseInt(e.target.getAttribute('data-step-template'));
+      workflowSteps[index].template = e.target.value;
+    });
+  });
+
+  container.querySelectorAll('[data-remove-step]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const index = parseInt(btn.getAttribute('data-remove-step'));
+      workflowSteps.splice(index, 1);
+      renderWorkflowStepsEditor();
+    });
+  });
+}
+
+async function updateWorkflowStats() {
+  const workflows = await getWorkflows();
+  const countEl = document.getElementById('workflow-count');
+  if (countEl) countEl.textContent = String(workflows.length);
+}
+
+document.getElementById('manage-workflows-btn')?.addEventListener('click', async () => {
+  const manager = document.getElementById('workflow-manager');
+  if (manager) {
+    manager.style.display = 'block';
+    await renderWorkflowList();
+    await updateWorkflowStats();
+  }
+});
+
+document.getElementById('close-workflow-manager')?.addEventListener('click', () => {
+  const manager = document.getElementById('workflow-manager');
+  if (manager) manager.style.display = 'none';
+  document.getElementById('workflow-form').style.display = 'none';
+});
+
+document.getElementById('create-workflow-btn')?.addEventListener('click', () => {
+  editingWorkflowId = null;
+  workflowSteps = [];
+
+  document.getElementById('workflow-form-title').textContent = 'Create New Workflow';
+  document.getElementById('wf-name').value = '';
+  document.getElementById('wf-category').value = '';
+  document.getElementById('wf-variables').value = '';
+
+  renderWorkflowStepsEditor();
+  document.getElementById('workflow-form').style.display = 'block';
+});
+
+document.getElementById('add-step-btn')?.addEventListener('click', () => {
+  workflowSteps.push({ title: '', template: '' });
+  renderWorkflowStepsEditor();
+});
+
+document.getElementById('cancel-workflow-btn')?.addEventListener('click', () => {
+  document.getElementById('workflow-form').style.display = 'none';
+  editingWorkflowId = null;
+  workflowSteps = [];
+});
+
+document.getElementById('save-workflow-btn')?.addEventListener('click', async () => {
+  const name = document.getElementById('wf-name').value.trim();
+  const category = document.getElementById('wf-category').value.trim() || 'Uncategorized';
+  const variablesText = document.getElementById('wf-variables').value.trim();
+
+  if (!name) {
+    alert('Please enter a workflow name.');
+    return;
+  }
+
+  if (workflowSteps.length === 0) {
+    alert('Please add at least one step.');
+    return;
+  }
+
+  const variables = variablesText.split('\n')
+    .map(line => line.trim())
+    .filter(line => line && line.includes('|'))
+    .map(line => {
+      const [key, label] = line.split('|').map(s => s.trim());
+      return { key, label };
+    });
+
+  const workflow = {
+    id: editingWorkflowId || crypto.randomUUID(),
+    name,
+    category,
+    variables,
+    steps: workflowSteps.filter(s => s.title && s.template)
+  };
+
+  await saveWorkflow(workflow);
+  await renderWorkflowList();
+  await renderWorkflowSelect();
+  await updateWorkflowStats();
+
+  document.getElementById('workflow-form').style.display = 'none';
+  editingWorkflowId = null;
+  workflowSteps = [];
+
+  alert(`Workflow "${name}" saved successfully!`);
+});
+
+// -------------------------
+// Workflow Export/Import
+// -------------------------
+document.getElementById('export-workflows-btn')?.addEventListener('click', async () => {
+  const workflows = await getWorkflows();
+  if (workflows.length === 0) {
+    alert('No workflows to export.');
+    return;
+  }
+  const json = JSON.stringify(workflows, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `workflows-export-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('import-workflows-btn')?.addEventListener('click', () => {
+  document.getElementById('import-workflows-file')?.click();
+});
+
+document.getElementById('import-workflows-file')?.addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (event) => {
+    try {
+      const imported = JSON.parse(event.target.result);
+      if (!Array.isArray(imported)) {
+        alert('Invalid file format. Expected an array of workflow objects.');
+        return;
+      }
+
+      const existing = await getWorkflows();
+      const map = new Map();
+      for (const w of existing) map.set(w.id, w);
+      for (const w of imported) {
+        if (w.id && w.name && Array.isArray(w.steps) && Array.isArray(w.variables)) {
+          map.set(w.id, w);
+        }
+      }
+
+      const merged = Array.from(map.values());
+      await setWorkflows(merged);
+      await renderWorkflowList();
+      await renderWorkflowSelect();
+      await updateWorkflowStats();
+
+      alert(`Successfully imported ${imported.length} workflow(s)!`);
+    } catch (err) {
+      console.error('Import error:', err);
+      alert('Error importing file: ' + (err?.message || String(err)));
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+document.getElementById('reset-workflows-btn')?.addEventListener('click', async () => {
+  if (!confirm('Reset all workflows to defaults? This will delete any custom workflows you created!')) return;
+
+  await resetWorkflowsToDefaults();
+  await renderWorkflowList();
+  await renderWorkflowSelect();
+  await updateWorkflowStats();
+
+  alert('Workflows reset to defaults!');
+});
+
+// -------------------------
 // Workflow Event Handlers
 // -------------------------
-document.getElementById('workflow-select')?.addEventListener('change', (e) => {
+document.getElementById('workflow-select')?.addEventListener('change', async (e) => {
   const workflowId = e.target.value;
   const contentDiv = document.getElementById('workflow-content');
 
@@ -1025,46 +1341,46 @@ document.getElementById('workflow-select')?.addEventListener('change', (e) => {
   workflowState.variables = {};
 
   if (contentDiv) contentDiv.style.display = 'block';
-  renderWorkflowVariables();
-  renderWorkflowStep();
+  await renderWorkflowVariables();
+  await renderWorkflowStep();
 });
 
-document.getElementById('workflow-prev')?.addEventListener('click', () => {
+document.getElementById('workflow-prev')?.addEventListener('click', async () => {
   if (workflowState.currentStepIndex > 0) {
     workflowState.currentStepIndex--;
-    renderWorkflowStep();
+    await renderWorkflowStep();
   }
 });
 
-document.getElementById('workflow-next')?.addEventListener('click', () => {
-  const workflow = getActiveWorkflow();
+document.getElementById('workflow-next')?.addEventListener('click', async () => {
+  const workflow = await getActiveWorkflow();
   if (workflow && workflowState.currentStepIndex < workflow.steps.length - 1) {
     workflowState.currentStepIndex++;
-    renderWorkflowStep();
+    await renderWorkflowStep();
   }
 });
 
 document.getElementById('workflow-insert')?.addEventListener('click', async () => {
-  const workflow = getActiveWorkflow();
+  const workflow = await getActiveWorkflow();
   if (!workflow) return;
 
   const step = workflow.steps[workflowState.currentStepIndex];
   if (!step) return;
 
-  const vars = collectWorkflowVars();
+  const vars = await collectWorkflowVars();
   const text = substituteVars(step.template, vars);
 
   await insertIntoActiveElement(text);
 });
 
 document.getElementById('workflow-copy')?.addEventListener('click', async () => {
-  const workflow = getActiveWorkflow();
+  const workflow = await getActiveWorkflow();
   if (!workflow) return;
 
   const step = workflow.steps[workflowState.currentStepIndex];
   if (!step) return;
 
-  const vars = collectWorkflowVars();
+  const vars = await collectWorkflowVars();
   const text = substituteVars(step.template, vars);
 
   try {
@@ -1099,5 +1415,10 @@ document.getElementById('detach-btn')?.addEventListener('click', () => {
 // -------------------------
 // Initialize on load
 // -------------------------
-populateCategoryControls();
+(async function init() {
+  await initializeWorkflows();
+  await populateCategoryControls();
+  await renderWorkflowSelect();
+  await updateWorkflowStats();
+})();
 
