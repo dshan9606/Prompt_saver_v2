@@ -675,6 +675,7 @@ function activateTab(tabName) {
     loadPrompts(getSearchTerm(), getSelectedCategory());
   } else if (tabName === 'manage') {
     updateStats();
+    loadManagePrompts();
   } else if (tabName === 'workflows') {
     renderWorkflowSelect();
   }
@@ -738,18 +739,35 @@ document.getElementById('save-form')?.addEventListener('submit', async (e) => {
     category = typed;
   }
   category = await ensureCategory(category);
-  const prompt = {
-    id: (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
-    title,
-    tags: tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [],
-    text,
-    category,
-    createdAt: new Date().toISOString()
-  };
+
   try {
     const result = await chrome.storage.local.get(['prompts']);
-    const prompts = result?.prompts || [];
-    prompts.unshift(prompt);
+    let prompts = result?.prompts || [];
+
+    if (editingPromptId) {
+      const index = prompts.findIndex(p => String(p.id) === String(editingPromptId));
+      if (index >= 0) {
+        prompts[index] = {
+          ...prompts[index],
+          title,
+          tags: tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [],
+          text,
+          category
+        };
+      }
+      editingPromptId = null;
+    } else {
+      const prompt = {
+        id: (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
+        title,
+        tags: tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [],
+        text,
+        category,
+        createdAt: new Date().toISOString()
+      };
+      prompts.unshift(prompt);
+    }
+
     await chrome.storage.local.set({ prompts });
     const successMsg = document.getElementById('success-message');
     if (successMsg) {
@@ -757,6 +775,9 @@ document.getElementById('save-form')?.addEventListener('submit', async (e) => {
       setTimeout(() => successMsg.classList.remove('show'), 3000);
     }
     document.getElementById('save-form').reset();
+    const submitBtn = document.querySelector('#save-form button[type="submit"]');
+    if (submitBtn) submitBtn.textContent = '💾 Save Prompt';
+    if (submitBtn) submitBtn.removeAttribute('data-editing');
     await populateCategoryControls();
   } catch (err) {
     console.error('Error saving prompt:', err);
@@ -816,12 +837,16 @@ async function loadPrompts(searchTerm = '', category = '') {
         </div>
         <pre class="prompt-text">${escapeHtml(prompt.text || '')}</pre>
         <div class="prompt-actions">
+          <button class="btn btn-edit" data-id="${escapeHtml(String(prompt.id))}" aria-label="Edit prompt">✏️ Edit</button>
           <button class="btn btn-copy" data-id="${escapeHtml(String(prompt.id))}" aria-label="Copy prompt">📋 Copy</button>
           <button class="btn btn-paste" data-id="${escapeHtml(String(prompt.id))}" aria-label="Paste prompt">📥 Paste</button>
           <button class="btn btn-delete" data-id="${escapeHtml(String(prompt.id))}" aria-label="Delete prompt">🗑️ Delete</button>
         </div>
       </div>
     `).join('');
+    listEl.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.addEventListener('click', () => editPrompt(btn.getAttribute('data-id')));
+    });
     listEl.querySelectorAll('.btn-copy').forEach(btn => {
       btn.addEventListener('click', () => copyPrompt(btn.getAttribute('data-id')));
     });
@@ -952,6 +977,100 @@ async function deletePrompt(id) {
   } catch (err) {
     console.error('Delete error:', err);
     alert('Could not delete the prompt. Please try again.');
+  }
+}
+
+// -------------------------
+// Edit a prompt
+// -------------------------
+let editingPromptId = null;
+
+async function editPrompt(id) {
+  try {
+    const result = await chrome.storage.local.get(['prompts']);
+    const prompts = result?.prompts || [];
+    const prompt = prompts.find(p => String(p.id) === String(id));
+    if (!prompt) return;
+
+    editingPromptId = id;
+    const titleEl = document.getElementById('prompt-title');
+    const tagsEl = document.getElementById('prompt-tags');
+    const textEl = document.getElementById('prompt-text');
+    const catSel = document.getElementById('prompt-category');
+    const formTitle = document.querySelector('#save-form h3') || document.createElement('h3');
+
+    if (titleEl) titleEl.value = prompt.title || '';
+    if (tagsEl) tagsEl.value = (prompt.tags || []).join(', ');
+    if (textEl) textEl.value = prompt.text || '';
+    if (catSel) catSel.value = prompt.category || DEFAULT_CATEGORY;
+
+    const submitBtn = document.querySelector('#save-form button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.textContent = '💾 Update Prompt';
+      submitBtn.setAttribute('data-editing', id);
+    }
+
+    activateTab('save');
+  } catch (err) {
+    console.error('Edit error:', err);
+    alert('Could not load prompt for editing.');
+  }
+}
+
+async function deletePrompt(id) {
+  if (!confirm('Are you sure you want to delete this prompt?')) return;
+  try {
+    const result = await chrome.storage.local.get(['prompts']);
+    const prompts = result?.prompts || [];
+    const filtered = prompts.filter(p => String(p.id) !== String(id));
+    await chrome.storage.local.set({ prompts: filtered });
+    loadPrompts(getSearchTerm(), getSelectedCategory());
+    loadManagePrompts();
+  } catch (err) {
+    console.error('Delete error:', err);
+    alert('Could not delete the prompt. Please try again.');
+  }
+}
+
+// -------------------------
+// Load & display prompts in manage tab
+// -------------------------
+async function loadManagePrompts() {
+  try {
+    const result = await chrome.storage.local.get(['prompts']);
+    let prompts = result?.prompts || [];
+    const listEl = document.getElementById('manage-prompt-list');
+    if (!listEl) return;
+
+    if (!prompts.length) {
+      listEl.innerHTML = '<div class="empty"><div class="emoji">📝</div><div>No prompts saved yet.</div></div>';
+      return;
+    }
+
+    listEl.innerHTML = prompts.map(prompt => `
+      <div class="prompt-card">
+        <div class="prompt-header">
+          <div class="prompt-title">${escapeHtml(prompt.title || '')}</div>
+          <div>
+            <span class="pill">${escapeHtml(prompt.category || DEFAULT_CATEGORY)}</span>
+            ${prompt.tags?.length ? `<span class="pill">${prompt.tags.map(t => `#${escapeHtml(t)}`).join(' ')}</span>` : ''}
+          </div>
+        </div>
+        <div class="prompt-actions">
+          <button class="btn manage-edit-btn" data-id="${escapeHtml(String(prompt.id))}" aria-label="Edit prompt">✏️ Edit</button>
+          <button class="btn manage-delete-btn" data-id="${escapeHtml(String(prompt.id))}" aria-label="Delete prompt">🗑️ Delete</button>
+        </div>
+      </div>
+    `).join('');
+
+    listEl.querySelectorAll('.manage-edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => editPrompt(btn.getAttribute('data-id')));
+    });
+    listEl.querySelectorAll('.manage-delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => deletePrompt(btn.getAttribute('data-id')));
+    });
+  } catch (err) {
+    console.error('Error loading manage prompts:', err);
   }
 }
 

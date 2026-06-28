@@ -5,50 +5,53 @@
   <title>Prompt Saver</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root { --bg:#101317; --fg:#e8ecf1; --muted:#a7b0ba; --pri:#2e7dff; --ok:#45a049; --danger:#d9534f; --card:#151a21; --pill:#263043; }
-    body { margin:0; font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--fg); width:420px; }
-    header { display:flex; align-items:center; gap:.6rem; padding:12px 14px; border-bottom:1px solid #222a33; }
+    :root { --bg:#0d1117; --fg:#e6edf3; --muted:#8b949e; --pri:#58a6ff; --ok:#3fb950; --danger:#f85149; --card:#161b22; --pill:#1c2128; }
+    html, body { margin:0; padding:0; height:100%; }
+    body { font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--fg); display:flex; flex-direction:column; min-height:100vh; }
+    header { display:flex; align-items:center; gap:.6rem; padding:12px 14px; border-bottom:1px solid #30363d; flex-shrink:0; }
     header h1 { font-size:16px; margin:0; }
-    .tabs { display:flex; gap:6px; padding:8px 10px; border-bottom:1px solid #222a33; }
-    .tab { border:0; background:#1b2230; color:var(--fg); padding:8px 10px; border-radius:6px; cursor:pointer; }
-    .tab.active { background:var(--pri); }
-    .content { padding:12px; }
-    .tab-content { display:none; }
-    .tab-content.active { display:block; }
+    .tabs { display:flex; gap:6px; padding:8px 10px; border-bottom:1px solid #30363d; flex-shrink:0; }
+    .tab { border:0; background:#21262d; color:var(--fg); padding:8px 10px; border-radius:6px; cursor:pointer; }
+    .tab.active { background:var(--pri); color:#010409; }
+    .content { padding:12px; flex:1; display:flex; flex-direction:column; overflow-y:auto; }
+    .tab-content { display:none; height:100%; overflow-y:auto; }
+    .tab-content.active { display:flex; flex-direction:column; }
     .row { display:flex; gap:8px; }
     .row > * { flex:1; }
     label { display:block; margin:10px 0 6px; color:var(--muted); }
-    input[type="text"], select, textarea { width:100%; box-sizing:border-box; background:#0f141a; color:var(--fg); border:1px solid #2a3340; border-radius:6px; padding:8px; }
-    textarea { min-height:110px; resize:vertical; }
-    .btn { background:#2a3340; color:var(--fg); border:0; padding:8px 10px; border-radius:6px; cursor:pointer; }
-    .btn.primary { background:var(--pri); }
-    .btn.danger { background:var(--danger); }
+    input[type="text"], select, textarea { width:100%; box-sizing:border-box; background:#0d1117; color:var(--fg); border:1px solid #30363d; border-radius:6px; padding:8px; }
+    textarea { min-height:110px; resize:vertical; flex:1; max-height:none; }
+    .btn { background:#21262d; color:var(--fg); border:0; padding:8px 10px; border-radius:6px; cursor:pointer; }
+    .btn.primary { background:var(--pri); color:#010409; }
+    .btn.danger { background:var(--danger); color:#fff; }
     .btn-group { display:flex; gap:8px; flex-wrap:wrap; }
-    .success { display:none; margin-top:8px; color:#9ef6b3; }
+    .success { display:none; margin-top:8px; color:#3fb950; }
     .success.show { display:block; }
-    .pill { background:var(--pill); color:#cfe0ff; border-radius:999px; padding:4px 8px; margin-left:6px; font-size:12px; }
-    .prompt-card { background:var(--card); border:1px solid #2a3340; border-radius:8px; padding:10px; margin:10px 0; }
+    .pill { background:var(--pill); color:#79c0ff; border-radius:999px; padding:4px 8px; margin-left:6px; font-size:12px; }
+    .prompt-card { background:var(--card); border:1px solid #30363d; border-radius:8px; padding:10px; margin:10px 0; }
     .prompt-header { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-    .prompt-title { font-weight:600; }
-    .prompt-text { white-space:pre-wrap; background:#0f141a; border:1px solid #2a3340; padding:8px; border-radius:6px; margin:8px 0; }
-    .prompt-actions { display:flex; gap:6px; }
+    .prompt-title { font-weight:600; color:#e6edf3; }
+    .prompt-text { white-space:pre-wrap; background:#0d1117; border:1px solid #30363d; padding:8px; border-radius:6px; margin:8px 0; flex:1; overflow-y:auto; color:#e6edf3; min-height:150px; }
+    .prompt-actions { display:flex; gap:6px; flex-shrink:0; }
     .empty { text-align:center; color:var(--muted); padding:24px 8px; }
     .empty .emoji { font-size:28px; margin-bottom:6px; }
-    .top-filters { display:flex; gap:8px; }
+    .top-filters { display:flex; gap:8px; flex-shrink:0; }
     small.hint { color:var(--muted); }
-    .workflow-preview { background:#0f141a; border:1px solid #2a3340; padding:10px; border-radius:6px; margin:10px 0; white-space:pre-wrap; min-height:80px; }
+    .workflow-preview { background:#0d1117; border:1px solid #30363d; padding:10px; border-radius:6px; margin:10px 0; white-space:pre-wrap; flex:1; overflow-y:auto; color:#e6edf3; min-height:150px; }
     .workflow-nav { display:flex; justify-content:space-between; align-items:center; margin:10px 0; }
     .workflow-step-info { color:var(--muted); font-size:13px; }
     .workflow-variables { margin:10px 0; }
     .workflow-variables input { margin-bottom:8px; }
-    .workflow-card { background:var(--card); border:1px solid #2a3340; border-radius:8px; padding:10px; margin:10px 0; }
+    .workflow-card { background:var(--card); border:1px solid #30363d; border-radius:8px; padding:10px; margin:10px 0; }
     .workflow-card-header { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-    .workflow-card-title { font-weight:600; }
+    .workflow-card-title { font-weight:600; color:#e6edf3; }
     .workflow-card-actions { display:flex; gap:6px; }
-    .step-editor { background:#0f141a; border:1px solid #2a3340; border-radius:6px; padding:10px; margin:10px 0; }
+    .step-editor { background:#0d1117; border:1px solid #30363d; border-radius:6px; padding:10px; margin:10px 0; }
     .step-editor-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
     .step-editor input[type="text"] { margin-bottom:8px; }
-    .step-editor textarea { min-height:120px; }
+    .step-editor textarea { min-height:120px; flex:1; }
+    form { display:flex; flex-direction:column; height:100%; }
+    #prompt-list { flex:1; overflow-y:auto; }
   </style>
 </head>
 <body>
@@ -170,7 +173,7 @@
     </div>
 
     <!-- WORKFLOW MANAGEMENT MODAL -->
-    <div id="workflow-manager" style="display:none;margin-top:20px;border-top:1px solid #2a3340;padding-top:20px;">
+    <div id="workflow-manager" style="display:none;margin-top:20px;border-top:1px solid #30363d;padding-top:20px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <h3 style="margin:0;">Manage Workflows</h3>
         <button id="close-workflow-manager" class="btn" style="padding:6px 10px;font-size:12px;">✕ Close</button>
@@ -183,7 +186,7 @@
       <div id="workflow-list"></div>
 
       <!-- CREATE/EDIT WORKFLOW FORM -->
-      <div id="workflow-form" style="display:none;margin-top:20px;border:1px solid #2a3340;border-radius:8px;padding:12px;background:var(--card);">
+      <div id="workflow-form" style="display:none;margin-top:20px;border:1px solid #30363d;border-radius:8px;padding:12px;background:var(--card);">
         <h4 id="workflow-form-title">Create New Workflow</h4>
 
         <label for="wf-name">Workflow Name</label>
