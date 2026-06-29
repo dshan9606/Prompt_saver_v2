@@ -1,5 +1,5 @@
 {
-  "manifest_version": 4,
+  "manifest_version": 2,
   "name": "Prompt Saver",
   "version": "2.0.0",
   "description": "Save, organize, and manage your AI prompts",
