@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Prompt Saver",
   "version": "2.0.0",
   "description": "Save, organize, and manage your AI prompts",
@@ -13,7 +13,7 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["storage", "clipboardWrite", "scripting", "activeTab"],
+  "permissions": ["storage", "clipboardWrite", "scripting"],
   "host_permissions": ["https://m365.cloud.microsoft/*"],
   "icons": {
     "16": "icon16.png",
