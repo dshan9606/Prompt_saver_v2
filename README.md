@@ -1,7 +1,7 @@
 
 # Prompt Manager & Workflow Assistant (Chrome Extension)
 
-**Last updated:** 2025-01-16
+**Last updated:** 2025-07-14
 
 This repository contains a Chrome/Chromium extension that combines a **Prompt Manager** with **Workflow Automation** capabilities.
 It lets you **save**, **search**, **copy**, **delete**, **export**, and **import** text prompts, plus run **guided multi-step workflows** with variable substitution and direct integration with **Microsoft 365 Copilot Chat**.
@@ -45,6 +45,12 @@ It lets you **save**, **search**, **copy**, **delete**, **export**, and **import
   - IT Control Test QA (3-step process)
   - Issue & RP – SLOD Credible Challenge (3-step process)
   - SLOD Review – Not Able to Test (3-step process)
+
+### UI Appearance
+- **Green color theme** — easy-on-the-eyes pale green background (`#e8f5e9`) with dark green text (`#1b5e20`) and soft green accents (`#81c784`)
+- **Scrollable text areas** — all prompt input fields, step editors, and preview panels include vertical scrolling (`overflow-y: auto`) for long content without expanding the popup
+- **Resizable text areas** — prompt and step text fields can be resized vertically by dragging the bottom edge
+- All UI elements use a cohesive Material Design green palette for a calm, readable, and accessible interface
 
 ---
 
@@ -199,6 +205,11 @@ Workflows are defined in `popup.js` in the `DEFAULT_WORKFLOWS` array. To add a n
 - **Workflows**: Run guided multi-step workflows with variable substitution
 - **Manage**: View statistics, export/import data, clear all prompts
 
+**UI Theme & Layout:**
+- The extension uses a **green color theme** with a pale green background (`#e8f5e9`), dark green text (`#1b5e20`), and soft green accents (`#81c784`) for a calm, easy-on-the-eyes appearance
+- All **prompt text fields** and **preview panels** have vertical scrollbars (using `overflow-y: auto`) so you can view and edit long content without the popup expanding
+- Text areas are **resizable** — drag the bottom edge to adjust height as needed
+
 ### Key Actions
 
 #### Prompt Management
@@ -344,6 +355,10 @@ Workflows are defined in `popup.js` in the `DEFAULT_WORKFLOWS` array. To add a n
 - [ ] No console errors in the extension background or popup pages
 - [ ] Tab switching works smoothly
 - [ ] Real-time preview updates without lag
+- [ ] UI displays with green color theme (pale green background `#e8f5e9`, dark green text `#1b5e20`, soft green borders `#81c784`)
+- [ ] All prompt text fields display vertical scrollbar when content overflows
+- [ ] Workflow preview panel displays vertical scrollbar when content overflows
+- [ ] Step editor textarea is scrollable for long prompts
 
 ---
 
